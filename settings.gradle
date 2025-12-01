@@ -1,0 +1,4 @@
+rootProject.name = "VisbotClient"
+include ':app'
+include ':visbot-sdk'
+
