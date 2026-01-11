@@ -25,17 +25,21 @@ public class MainActivity extends AppCompatActivity {
     
     // UI组件
     private TextView tvStatus;
-    private EditText etServoAngle;
-    private EditText etServoSpeed;
-    private EditText etMoveSpeed;
-    private Button btnConnect;
-    private Button btnServoRotate;
     private Button btnServoCenter;
+    private Button btnHeadUp;
+    private Button btnHeadDown;
     private Button btnMoveForward;
     private Button btnMoveBackward;
     private Button btnTurnLeft;
     private Button btnTurnRight;
     private Button btnStop;
+    
+    // 固定参数
+    private static final float MOVE_SPEED = 50.0f;
+    private static final float TURN_ANGLE = 90.0f;
+    private static final float HEAD_UP_ANGLE = -10.0f;
+    private static final float HEAD_DOWN_ANGLE = 10.0f;
+    private static final int SERVO_SPEED = 50;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,23 +63,14 @@ public class MainActivity extends AppCompatActivity {
      */
     private void initViews() {
         tvStatus = findViewById(R.id.tv_status);
-        etServoAngle = findViewById(R.id.et_servo_angle);
-        etServoSpeed = findViewById(R.id.et_servo_speed);
-        etMoveSpeed = findViewById(R.id.et_move_speed);
-
-        btnConnect = findViewById(R.id.btn_connect);
-        btnServoRotate = findViewById(R.id.btn_servo_rotate);
         btnServoCenter = findViewById(R.id.btn_servo_center);
+        btnHeadUp = findViewById(R.id.btn_head_up);
+        btnHeadDown = findViewById(R.id.btn_head_down);
         btnMoveForward = findViewById(R.id.btn_move_forward);
         btnMoveBackward = findViewById(R.id.btn_move_backward);
         btnTurnLeft = findViewById(R.id.btn_turn_left);
         btnTurnRight = findViewById(R.id.btn_turn_right);
         btnStop = findViewById(R.id.btn_stop);
-
-        // 设置默认值
-        etServoAngle.setText("45");
-        etServoSpeed.setText("50");
-        etMoveSpeed.setText("50");
     }
     
     /**
@@ -95,17 +90,6 @@ public class MainActivity extends AppCompatActivity {
             if (servoController.isConnected()) {
                 updateStatus("✓ Master服务连接成功");
                 showToast("连接成功");
-                btnConnect.setText("已连接");
-                btnConnect.setEnabled(false);
-
-                // 自动测试：延迟2秒后测试舵机旋转
-                new android.os.Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        Log.i(TAG, "=== 自动测试：触发舵机旋转 ===");
-                        testServoRotation();
-                    }
-                }, 2000);
             } else {
                 updateStatus("✗ Master服务连接失败");
                 updateStatus("请确保：");
@@ -126,104 +110,59 @@ public class MainActivity extends AppCompatActivity {
      * 设置按钮监听器
      */
     private void setupListeners() {
-        // 舵机旋转
-        btnServoRotate.setOnClickListener(v -> {
-            Log.i(TAG, "=== 舵机旋转按钮被点击 ===");
-
-            try {
-                float angle = Float.parseFloat(etServoAngle.getText().toString());
-                int speed = Integer.parseInt(etServoSpeed.getText().toString());
-
-                Log.i(TAG, "解析参数成功 - angle: " + angle + ", speed: " + speed);
-
-                // 检查 servoController 是否为 null
-                if (servoController == null) {
-                    Log.e(TAG, "servoController is NULL!");
-                    showToast("舵机控制器未初始化");
-                    return;
-                }
-
-                Log.i(TAG, "servoController 不为空，准备调用 rotate()");
-                updateStatus("旋转舵机到 " + angle + "° (速度: " + speed + ")");
-
-                // 使用正确的舵机 ID: "head"
-                Log.i(TAG, "调用 servoController.rotate() - servoId: head, angle: " + angle + ", speed: " + speed);
-                boolean success = servoController.rotate("head", angle, speed);
-                Log.i(TAG, "servoController.rotate() 返回: " + success);
-
-                if (success) {
-                    showToast("舵机旋转命令已发送");
-                } else {
-                    showToast("舵机旋转命令发送失败");
-                }
-            } catch (NumberFormatException e) {
-                Log.e(TAG, "数值解析失败", e);
-                showToast("请输入有效的数值");
-            } catch (Exception e) {
-                Log.e(TAG, "舵机旋转异常", e);
-                showToast("舵机旋转异常: " + e.getMessage());
-            }
+        // 抬头
+        btnHeadUp.setOnClickListener(v -> {
+            updateStatus("抬头 (" + HEAD_UP_ANGLE + "°)");
+            boolean success = servoController.rotate("head", HEAD_UP_ANGLE, SERVO_SPEED);
+            showToast(success ? "抬头命令已发送" : "抬头命令发送失败");
+        });
+        
+        // 低头
+        btnHeadDown.setOnClickListener(v -> {
+            updateStatus("低头 (" + HEAD_DOWN_ANGLE + "°)");
+            boolean success = servoController.rotate("head", HEAD_DOWN_ANGLE, SERVO_SPEED);
+            showToast(success ? "低头命令已发送" : "低头命令发送失败");
         });
         
         // 舵机归中
         btnServoCenter.setOnClickListener(v -> {
             updateStatus("舵机归中");
-            // 使用正确的舵机 ID: "head"
-            boolean success = servoController.rotate("head", 0.0f, 50);
+            boolean success = servoController.rotate("head", 0.0f, SERVO_SPEED);
             showToast(success ? "归中命令已发送" : "归中命令发送失败");
         });
         
         // 前进
         btnMoveForward.setOnClickListener(v -> {
-            try {
-                float speed = Float.parseFloat(etMoveSpeed.getText().toString());
-
-                updateStatus("前进 (速度: " + speed + ")");
-                // 持续移动，duration=0
-                boolean success = motorController.moveForward(speed, 0);
-
-                showToast(success ? "前进命令已发送" : "前进命令发送失败");
-            } catch (NumberFormatException e) {
-                showToast("请输入有效的数值");
-            }
+            updateStatus("前进 (速度: " + MOVE_SPEED + ")");
+            boolean success = motorController.moveForward(MOVE_SPEED, 0);
+            showToast(success ? "前进命令已发送" : "前进命令发送失败");
         });
 
         // 后退
         btnMoveBackward.setOnClickListener(v -> {
-            try {
-                float speed = Float.parseFloat(etMoveSpeed.getText().toString());
-
-                updateStatus("后退 (速度: " + speed + ")");
-                // 持续移动，duration=0
-                boolean success = motorController.moveBackward(speed, 0);
-
-                showToast(success ? "后退命令已发送" : "后退命令发送失败");
-            } catch (NumberFormatException e) {
-                showToast("请输入有效的数值");
-            }
+            updateStatus("后退 (速度: " + MOVE_SPEED + ")");
+            boolean success = motorController.moveBackward(MOVE_SPEED, 0);
+            showToast(success ? "后退命令已发送" : "后退命令发送失败");
         });
 
         // 左转
         btnTurnLeft.setOnClickListener(v -> {
-            updateStatus("左转 90°");
-            boolean success = motorController.turnLeft(50.0f, 90.0f);
+            updateStatus("左转 " + TURN_ANGLE + "°");
+            boolean success = motorController.turnLeft(MOVE_SPEED, TURN_ANGLE);
             showToast(success ? "左转命令已发送" : "左转命令发送失败");
         });
 
         // 右转
         btnTurnRight.setOnClickListener(v -> {
-            updateStatus("右转 90°");
-            boolean success = motorController.turnRight(50.0f, 90.0f);
+            updateStatus("右转 " + TURN_ANGLE + "°");
+            boolean success = motorController.turnRight(MOVE_SPEED, TURN_ANGLE);
             showToast(success ? "右转命令已发送" : "右转命令发送失败");
         });
 
         // 停止
         btnStop.setOnClickListener(v -> {
             updateStatus("停止所有运动");
-
-            // 停止移动
             boolean success = motorController.stop();
-
             showToast(success ? "停止命令已发送" : "停止命令发送失败");
         });
     }
@@ -258,45 +197,6 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show());
     }
 
-    /**
-     * 自动测试获取舵机列表
-     */
-    private void testGetServoList() {
-        Log.i(TAG, "=== testGetServoList() called ===");
-        try {
-            String deviceList = servoController.getDeviceListJson();
-            Log.i(TAG, "舵机列表: " + deviceList);
-            updateStatus("舵机列表: " + deviceList);
-        } catch (Exception e) {
-            Log.e(TAG, "获取舵机列表失败", e);
-        }
-    }
-
-    /**
-     * 自动测试舵机旋转
-     */
-    private void testServoRotation() {
-        Log.i(TAG, "=== testServoRotation() called ===");
-        try {
-            // 使用正确的舵机 ID: "head"
-            String servoId = "head";
-            float angle = 10.0f;  // 在范围内：-23.0 到 25.0
-            int speed = 15;  // 使用默认速度
-
-            Log.i(TAG, "调用 servoController.rotate() - servoId: " + servoId + ", angle: " + angle + ", speed: " + speed);
-            boolean result = servoController.rotate(servoId, angle, speed);
-            Log.i(TAG, "servoController.rotate() 返回: " + result);
-
-            if (result) {
-                updateStatus("✓ 舵机旋转命令已发送");
-            } else {
-                updateStatus("✗ 舵机旋转命令失败");
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "测试舵机旋转失败", e);
-            updateStatus("✗ 测试失败: " + e.getMessage());
-        }
-    }
     
     @Override
     protected void onDestroy() {
