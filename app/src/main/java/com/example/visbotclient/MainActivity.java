@@ -24,7 +24,6 @@ public class MainActivity extends AppCompatActivity {
     private MotorControllerClient motorController;
     
     // UI组件
-    private TextView tvStatus;
     private Button btnServoCenter;
     private Button btnHeadUp;
     private Button btnHeadDown;
@@ -62,7 +61,6 @@ public class MainActivity extends AppCompatActivity {
      * 初始化UI组件
      */
     private void initViews() {
-        tvStatus = findViewById(R.id.tv_status);
         btnServoCenter = findViewById(R.id.btn_servo_center);
         btnHeadUp = findViewById(R.id.btn_head_up);
         btnHeadDown = findViewById(R.id.btn_head_down);
@@ -77,8 +75,6 @@ public class MainActivity extends AppCompatActivity {
      * 初始化控制器
      */
     private void initControllers() {
-        updateStatus("正在连接Master服务...");
-        
         try {
             // 创建舵机控制器
             servoController = new ServoControllerClient(this);
@@ -88,21 +84,14 @@ public class MainActivity extends AppCompatActivity {
 
             // 检查连接状态
             if (servoController.isConnected()) {
-                updateStatus("✓ Master服务连接成功");
                 showToast("连接成功");
             } else {
-                updateStatus("✗ Master服务连接失败");
-                updateStatus("请确保：");
-                updateStatus("1. APK使用系统签名");
-                updateStatus("2. AndroidManifest.xml中设置了sharedUserId");
-                updateStatus("3. 设备上已安装Visbot系统服务");
                 showToast("连接失败");
             }
             
         } catch (Exception e) {
             Log.e(TAG, "Failed to initialize controllers", e);
-            updateStatus("✗ 初始化失败: " + e.getMessage());
-            showToast("初始化失败");
+            showToast("初始化失败: " + e.getMessage());
         }
     }
     
@@ -112,81 +101,42 @@ public class MainActivity extends AppCompatActivity {
     private void setupListeners() {
         // 抬头
         btnHeadUp.setOnClickListener(v -> {
-            updateStatus("抬头 (" + HEAD_UP_ANGLE + "°)");
-            boolean success = servoController.rotate("head", HEAD_UP_ANGLE, SERVO_SPEED);
-            showToast(success ? "抬头命令已发送" : "抬头命令发送失败");
+            servoController.rotate("head", HEAD_UP_ANGLE, SERVO_SPEED);
         });
         
         // 低头
         btnHeadDown.setOnClickListener(v -> {
-            updateStatus("低头 (" + HEAD_DOWN_ANGLE + "°)");
-            boolean success = servoController.rotate("head", HEAD_DOWN_ANGLE, SERVO_SPEED);
-            showToast(success ? "低头命令已发送" : "低头命令发送失败");
+            servoController.rotate("head", HEAD_DOWN_ANGLE, SERVO_SPEED);
         });
         
         // 舵机归中
         btnServoCenter.setOnClickListener(v -> {
-            updateStatus("舵机归中");
-            boolean success = servoController.rotate("head", 0.0f, SERVO_SPEED);
-            showToast(success ? "归中命令已发送" : "归中命令发送失败");
+            servoController.rotate("head", 0.0f, SERVO_SPEED);
         });
         
         // 前进
         btnMoveForward.setOnClickListener(v -> {
-            updateStatus("前进 (速度: " + MOVE_SPEED + ")");
-            boolean success = motorController.moveForward(MOVE_SPEED, 0);
-            showToast(success ? "前进命令已发送" : "前进命令发送失败");
+            motorController.moveForward(MOVE_SPEED, 300);
         });
 
         // 后退
         btnMoveBackward.setOnClickListener(v -> {
-            updateStatus("后退 (速度: " + MOVE_SPEED + ")");
-            boolean success = motorController.moveBackward(MOVE_SPEED, 0);
-            showToast(success ? "后退命令已发送" : "后退命令发送失败");
+            motorController.moveBackward(MOVE_SPEED, 300);
         });
 
         // 左转
         btnTurnLeft.setOnClickListener(v -> {
-            updateStatus("左转 " + TURN_ANGLE + "°");
-            boolean success = motorController.turnLeft(MOVE_SPEED, TURN_ANGLE);
-            showToast(success ? "左转命令已发送" : "左转命令发送失败");
+            motorController.turnLeft(MOVE_SPEED, TURN_ANGLE);
         });
 
         // 右转
         btnTurnRight.setOnClickListener(v -> {
-            updateStatus("右转 " + TURN_ANGLE + "°");
-            boolean success = motorController.turnRight(MOVE_SPEED, TURN_ANGLE);
-            showToast(success ? "右转命令已发送" : "右转命令发送失败");
+            motorController.turnRight(MOVE_SPEED, TURN_ANGLE);
         });
 
         // 停止
         btnStop.setOnClickListener(v -> {
-            updateStatus("停止所有运动");
-            boolean success = motorController.stop();
-            showToast(success ? "停止命令已发送" : "停止命令发送失败");
-        });
-    }
-    
-    /**
-     * 更新状态显示
-     */
-    private void updateStatus(String message) {
-        runOnUiThread(() -> {
-            String currentText = tvStatus.getText().toString();
-            String newText = message + "\n" + currentText;
-            
-            // 限制显示行数
-            String[] lines = newText.split("\n");
-            if (lines.length > 20) {
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < 20; i++) {
-                    sb.append(lines[i]).append("\n");
-                }
-                newText = sb.toString();
-            }
-            
-            tvStatus.setText(newText);
-            Log.i(TAG, message);
+            motorController.stop();
         });
     }
     
